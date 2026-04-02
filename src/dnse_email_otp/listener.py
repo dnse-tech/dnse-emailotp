@@ -7,8 +7,10 @@ import email.policy
 import logging
 import ssl
 import time
+from collections.abc import Callable
 from datetime import datetime, timezone
 from email.message import EmailMessage as StdlibEmailMessage
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 from imapclient import IMAPClient
@@ -21,6 +23,7 @@ _DEFAULT_HOST = "imap.gmail.com"
 _DEFAULT_PORT = 993
 _DEFAULT_FOLDER = "INBOX"
 _IDLE_TIMEOUT_SECS = 28 * 60  # 28 min (RFC 2177: must be < 29 min)
+_MAX_FETCH_UNSEEN = 50  # cap unseen fetch to prevent OOM on neglected mailboxes
 _MAX_RECONNECT_RETRIES = 3
 _BACKOFF_BASE_SECS = 1.0
 _BACKOFF_MAX_SECS = 30.0
@@ -41,7 +44,7 @@ class ImapListener:
         idle_timeout: Seconds before re-issuing IDLE command.
     """
 
-    def __init__(
+    def __init__(  # noqa: D107
         self,
         email_address: str,
         password: str,
@@ -64,7 +67,7 @@ class ImapListener:
         ctx = ssl.create_default_context()
         self._client = IMAPClient(self._host, port=self._port, ssl=True, ssl_context=ctx)
         self._client.login(self._email_address, self._password)
-        self._client.select_folder(self._folder)
+        self._client.select_folder(self._folder)  # type: ignore[reportUnknownMemberType]
         logger.info("Connected to %s:%d folder=%s", self._host, self._port, self._folder)
 
     def disconnect(self) -> None:
@@ -101,7 +104,7 @@ class ImapListener:
         client = self._ensure_connected()
         client.idle()
         try:
-            responses: list[Any] = client.idle_check(timeout=timeout)
+            responses: list[Any] = client.idle_check(timeout=timeout)  # type: ignore[reportUnknownMemberType]
         finally:
             client.idle_done()
 
@@ -117,21 +120,24 @@ class ImapListener:
             List of parsed EmailMessage instances.
         """
         client = self._ensure_connected()
-        uids: list[int] = client.search(["UNSEEN"])
+        uids: list[int] = client.search("UNSEEN")  # type: ignore[reportUnknownMemberType]
         if not uids:
             return []
+        uids = uids[:_MAX_FETCH_UNSEEN]
 
-        raw_messages: dict[int, dict[bytes, Any]] = client.fetch(uids, ["RFC822"])
+        raw_messages: dict[int, dict[bytes, Any]] = client.fetch(uids, ["RFC822"])  # type: ignore[reportUnknownMemberType]
         results: list[EmailMessage] = []
         for uid, data in raw_messages.items():
-            raw_bytes: bytes | None = data.get(b"RFC822")
+            raw_bytes: bytes | None = data.get(b"RFC822")  # type: ignore[reportAssignmentType]
             if raw_bytes is None:
                 logger.warning("UID %d: no RFC822 data, skipping", uid)
                 continue
             results.append(_parse_email(uid, raw_bytes))
         return results
 
-    def _with_reconnect(self, fn: Any) -> EmailMessage | None:
+    def _with_reconnect(
+        self, fn: Callable[[], EmailMessage | None]
+    ) -> EmailMessage | None:
         """Execute fn with auto-reconnect on connection errors.
 
         Retries up to _MAX_RECONNECT_RETRIES with exponential backoff.
@@ -142,7 +148,7 @@ class ImapListener:
         backoff = _BACKOFF_BASE_SECS
         for attempt in range(_MAX_RECONNECT_RETRIES + 1):
             try:
-                return fn()  # type: ignore[no-any-return]
+                return fn()
             except (OSError, IMAPClient.Error) as exc:
                 if attempt >= _MAX_RECONNECT_RETRIES:
                     msg = f"IMAP connection failed after {_MAX_RECONNECT_RETRIES} retries"
@@ -173,7 +179,7 @@ class ImapListener:
 def _has_exists(responses: list[Any]) -> bool:
     """Check if IDLE responses contain an EXISTS notification."""
     for resp in responses:
-        if isinstance(resp, tuple) and len(resp) >= 2:
+        if isinstance(resp, tuple) and len(resp) >= 2:  # type: ignore[reportUnknownArgumentType]
             flag = resp[1] if isinstance(resp[1], bytes) else b""
             if b"EXISTS" in flag:
                 return True
@@ -232,8 +238,6 @@ def _parse_date(date_str: Any) -> datetime:
     if date_str is None:
         return datetime.now(tz=timezone.utc)
     try:
-        from email.utils import parsedate_to_datetime
-
         return parsedate_to_datetime(str(date_str))
     except (ValueError, TypeError):
         logger.warning("Failed to parse date: %s", date_str)

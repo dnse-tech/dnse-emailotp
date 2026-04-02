@@ -17,6 +17,9 @@ build-backend = "hatchling.build"
 [tool.hatch.version]
 source = "vcs"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/dnse_email_otp"]
+
 [tool.hatch.build.hooks.vcs]
 version-file = "src/dnse_email_otp/_version.py"
 
@@ -45,6 +48,7 @@ convention = "google"
 [tool.pyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.10"
+reportMissingTypeStubs = "none"
 
 [[tool.pyright.executionEnvironments]]
 root = "tests"
