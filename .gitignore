@@ -6,3 +6,5 @@ build/
 .coverage
 .pytest_cache/
 src/dnse_email_otp/_version.py
+.claude/
+scripts/email-template.json

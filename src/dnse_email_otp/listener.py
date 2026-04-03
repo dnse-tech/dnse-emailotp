@@ -109,9 +109,28 @@ class ImapListener:
             client.idle_done()
 
         if _has_exists(responses):
-            unseen = self.fetch_unseen()
-            return unseen[0] if unseen else None
+            return self.fetch_latest_unseen()
         return None
+
+    def fetch_latest_unseen(self) -> EmailMessage | None:
+        """Fetch the most recent unseen message.
+
+        Returns:
+            Latest unseen EmailMessage, or None if no unseen messages.
+        """
+        client = self._ensure_connected()
+        uids: list[int] = client.search("UNSEEN")  # type: ignore[reportUnknownMemberType]
+        if not uids:
+            return None
+        latest_uid = uids[-1]
+        raw: dict[int, dict[bytes, Any]] = client.fetch([latest_uid], ["RFC822"])  # type: ignore[reportUnknownMemberType]
+        data = raw.get(latest_uid)
+        if data is None:
+            return None
+        raw_bytes: bytes | None = data.get(b"RFC822")  # type: ignore[reportAssignmentType]
+        if raw_bytes is None:
+            return None
+        return _parse_email(latest_uid, raw_bytes)
 
     def fetch_unseen(self) -> list[EmailMessage]:
         """Fetch all unseen messages from the selected folder.
