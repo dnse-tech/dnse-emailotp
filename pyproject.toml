@@ -3,7 +3,7 @@ name = "dnse-emailotp"
 dynamic = ["version"]
 description = "Gmail OTP retrieval via IMAP IDLE for DNSE"
 readme = "README.md"
-license = "MIT"
+license = "PolyForm-Noncommercial-1.0.0"
 requires-python = ">=3.10"
 dependencies = ["imapclient>=2.3"]
 
