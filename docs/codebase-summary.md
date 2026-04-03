@@ -16,8 +16,8 @@
 **Exports:**
 - `EmailMessage` — Frozen dataclass for parsed emails
 - `ImapListener` — Main IMAP listener class
-- `extract_otp()` — OTP extraction (stub)
-- `wait_for_otp()` — High-level convenience API (stub)
+- `extract_otp()` — OTP extraction from email body
+- `wait_for_otp()` — High-level convenience API combining listener + parser
 - `__version__` — Package version (from hatch-vcs)
 
 **Implementation Notes:**
@@ -122,7 +122,7 @@ with ImapListener("user@gmail.com", "apppass") as listener:
 ---
 
 ### `parser.py`
-**Purpose:** OTP extraction from email body text [STUB]
+**Purpose:** OTP extraction from email body text
 
 **Function: extract_otp**
 
@@ -132,24 +132,24 @@ def extract_otp(email_body: str) -> str | None:
 ```
 
 **Parameters:**
-- `email_body: str` — Plain text email body
+- `email_body: str` — Plain text or HTML email body
 
 **Returns:**
 - OTP string if found, None otherwise
 
-**Current Status:** Raises `NotImplementedError`
+**Implementation Details:**
+- Extracts 6-digit OTP codes from DNSE emails
+- **Pattern 1 (Vietnamese plain-text):** Matches "Mã OTP ... là:\n\n{6 digits}"
+- **Pattern 2 (HTML fallback):** Matches `<span style="letter-spacing: 25px;">{6 digits}</span>`
+- Returns first match found, None if no pattern matches
+- Logs extraction method for debugging
 
-**Future Implementation:**
-- Will likely use regex or pattern matching to find OTP codes
-- May handle variable OTP formats (4-6 digit codes, alphanumeric, etc.)
-- Should work with email_text bodies from EmailMessage
-
-**Dependencies:** None yet
+**Dependencies:** re (stdlib)
 
 ---
 
 ### `helper.py`
-**Purpose:** High-level convenience API combining listener and parser [STUB]
+**Purpose:** High-level convenience API combining listener and parser
 
 **Function: wait_for_otp**
 
@@ -178,16 +178,18 @@ def wait_for_otp(
 - OTP code string
 
 **Raises:**
-- `TimeoutError` — No OTP email within timeout
-- `NotImplementedError` — Stub not yet implemented
+- `TimeoutError` — No email within timeout or OTP not found in email
 
-**Future Implementation:**
-- Create ImapListener with provided credentials
-- Call wait_for_new_message(timeout)
-- If message found, pass body_text to extract_otp()
-- Return OTP or raise TimeoutError
+**Implementation Flow:**
+1. Creates ImapListener context with provided credentials
+2. Calls `wait_for_new_message(timeout)` to retrieve email
+3. If no message: logs warning, raises TimeoutError
+4. Tries extracting OTP from `body_text`, then `body_html`
+5. If OTP found: logs success, returns code
+6. If OTP not found: logs warning, raises TimeoutError
+7. Context manager ensures cleanup on success or error
 
-**Dependencies:** Will depend on listener.py and parser.py
+**Dependencies:** listener.py, parser.py
 
 ---
 
@@ -256,9 +258,9 @@ def wait_for_otp(
 - [x] Email parsing (RFC822)
 - [x] Context manager pattern
 
-**Phase 2 (Stubs):** OTP extraction and convenience API
-- [ ] extract_otp() — Pattern matching for codes
-- [ ] wait_for_otp() — Combined listener + parser
+**Phase 2 (Complete):** OTP extraction and convenience API
+- [x] extract_otp() — Pattern matching for 6-digit DNSE codes (Vietnamese + HTML formats)
+- [x] wait_for_otp() — Combined listener + parser with timeout handling
 
 **Phase 3 (Future):** Enhancements
 - [ ] Multiple IMAP providers (not just Gmail)
