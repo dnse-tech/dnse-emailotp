@@ -4,6 +4,20 @@ dynamic = ["version"]
 description = "Gmail OTP retrieval via IMAP IDLE for DNSE"
 readme = "README.md"
 license = "PolyForm-Noncommercial-1.0.0"
+authors = [{ name = "DNSE", email = "tech@dnse.com.vn" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Email",
+]
+
+[project.urls]
+Homepage = "https://github.com/dnse-tech/dnse-emailotp"
+Repository = "https://github.com/dnse-tech/dnse-emailotp"
+Issues = "https://github.com/dnse-tech/dnse-emailotp/issues"
 requires-python = ">=3.10"
 dependencies = ["imapclient>=2.3"]
 
