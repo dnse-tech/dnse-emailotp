@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+import logging
+
+from dnse_email_otp.listener import ImapListener
+from dnse_email_otp.parser import extract_otp
+
+logger = logging.getLogger(__name__)
+
 
 def wait_for_otp(
     email_address: str,
@@ -30,6 +37,19 @@ def wait_for_otp(
 
     Raises:
         TimeoutError: No OTP email within timeout.
-        NotImplementedError: Stub -- not yet implemented.
     """
-    raise NotImplementedError("wait_for_otp not yet implemented")
+    with ImapListener(
+        email_address, app_password, host=host, port=port, folder=folder
+    ) as listener:
+        msg = listener.wait_for_new_message(timeout=timeout)
+        if msg is None:
+            logger.warning("No email received within %.0fs", timeout)
+            raise TimeoutError("No email received within timeout")
+
+        otp = extract_otp(msg.body_text) or extract_otp(msg.body_html)
+        if otp is None:
+            logger.warning("Email received but no OTP found (subject=%s)", msg.subject)
+            raise TimeoutError("Email received but no OTP found")
+
+        logger.info("OTP extracted successfully")
+        return otp
