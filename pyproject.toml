@@ -14,12 +14,13 @@ classifiers = [
     "Topic :: Communications :: Email",
 ]
 
+requires-python = ">=3.10"
+dependencies = ["imapclient>=2.3"]
+
 [project.urls]
 Homepage = "https://github.com/dnse-tech/dnse-emailotp"
 Repository = "https://github.com/dnse-tech/dnse-emailotp"
 Issues = "https://github.com/dnse-tech/dnse-emailotp/issues"
-requires-python = ">=3.10"
-dependencies = ["imapclient>=2.3"]
 
 [project.optional-dependencies]
 dnse = ["dnse"]
